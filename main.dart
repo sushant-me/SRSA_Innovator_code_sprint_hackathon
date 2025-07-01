@@ -1,169 +1,309 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart'; // Import the mobile_scanner package
 
 void main() {
   runApp(const MyApp());
 }
 
+// Main app widget
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'QR Scanner',
+      title: 'Flutter Auth UI',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 215, 51, 1),
+        ),
+        useMaterial3: true,
       ),
-      home: const QRScannerScreen(),
+      home: const MyHomePage(title: 'Home 🎪'),
     );
   }
 }
 
-class QRScannerScreen extends StatefulWidget {
-  const QRScannerScreen({super.key});
+// Home Page
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+  final String title;
 
   @override
-  State<QRScannerScreen> createState() => _QRScannerScreenState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
-  // Controller for the MobileScanner widget
-  MobileScannerController cameraController = MobileScannerController();
-  // Variable to store the scanned barcode data
-  String? _scannedBarcode;
-  // Flag to control if the scanner is actively looking for codes
-  bool _isScanning = true;
+class _MyHomePageState extends State<MyHomePage> {
+  bool _loginRequired = true; // Disable UI until login is done
 
   @override
-  void dispose() {
-    // Dispose the camera controller when the widget is removed from the tree
-    cameraController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+
+    // Show login popup after 1 second
+    Future.delayed(const Duration(seconds: 1), () {
+      _showLoginPopup();
+    });
   }
 
-  // Function to handle detected barcodes
-  void _onBarcodeDetect(BarcodeCapture capture) {
-    // Check if we are currently scanning and if any barcodes were detected
-    if (_isScanning && capture.barcodes.isNotEmpty) {
-      // Get the raw value of the first detected barcode
-      final String? barcodeValue = capture.barcodes.first.rawValue;
-
-      // If a barcode value is found and it's not null
-      if (barcodeValue != null) {
-        setState(() {
-          _scannedBarcode = barcodeValue; // Store the scanned value
-          _isScanning = false; // Stop scanning to prevent multiple detections
-        });
-        // Pause the camera to freeze the view on the detected QR
-        cameraController.stop();
-
-        // Show an alert dialog with the scanned data
-        _showScannedDataDialog(barcodeValue);
-      }
-    }
-  }
-
-  // Function to show a dialog with the scanned QR data
-  void _showScannedDataDialog(String data) {
+  void _showLoginPopup() {
     showDialog(
       context: context,
-      barrierDismissible: false, // User must tap a button to dismiss
-      builder: (context) => AlertDialog(
-        title: const Text('QR Code Scanned!'),
-        content: SelectableText(
-          'Scanned Data:\n$data', // Display the scanned data
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close the dialog
-              _resetScanner(); // Reset scanner to allow new scans
-            },
-            child: const Text('Scan Again'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (_) => LoginPopup(onLoginSuccess: () {
+        setState(() {
+          _loginRequired = false; // Unlock the UI
+        });
+        Navigator.of(context).pop(); // Close the dialog
+      }),
     );
-  }
-
-  // Function to reset the scanner for a new scan
-  void _resetScanner() {
-    setState(() {
-      _scannedBarcode = null; // Clear previous scanned data
-      _isScanning = true; // Re-enable scanning
-    });
-    cameraController.start(); // Restart the camera
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('QR Code Scanner'),
-        centerTitle: true,
-        backgroundColor: Colors.blueAccent,
+        title: Text(widget.title),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Stack(
-        children: [
-          // MobileScanner widget takes up the full screen
-          MobileScanner(
-            controller: cameraController, // Assign the controller
-            onDetect: _onBarcodeDetect, // Callback for barcode detection
-            // You can add a scan window here if you want a specific area for scanning
-            // scanWindow: Rect.fromCenter(center: MediaQuery.of(context).size.center(Offset.zero), width: 200, height: 200),
-          ),
-          // Overlay for visual feedback (e.g., a scanning frame)
-          Center(
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 3),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: 10.0),
-                  child: Text(
-                    'Scan QR Code',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+      body: AbsorbPointer(
+        absorbing: _loginRequired,
+        child: Opacity(
+          opacity: _loginRequired ? 0.4 : 1,
+          child: SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Greeting & avatar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Good Morning,',
+                            style:
+                                TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            'Sushil Dai',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const CircleAvatar(
+                        radius: 30,
+                        backgroundImage: AssetImage('assets/profile.jpg'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Search bar
+                  TextField(
+                    enabled: !_loginRequired,
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
-                ),
+
+                  const SizedBox(height: 25),
+
+                  // Categories
+                  SizedBox(
+                    height: 90,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        _categoryItem(Icons.directions_car, "Load Balance",
+                            Colors.blue),
+                        _categoryItem(Icons.wifi_off, "Offline Mode",
+                            Colors.orange),
+                        _categoryItem(Icons.wifi, "Online Mode", Colors.green),
+                        _categoryItem(Icons.account_balance, "Bank Transfer",
+                            Colors.purple),
+                        _categoryItem(Icons.discount, "Promo Code", Colors.red),
+                        _categoryItem(Icons.help_outline, "Help", Colors.teal),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Promo Cards
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _promoCard(
+                          'Discover New Movies',
+                          'Get the latest movies and shows.',
+                          Colors.blueAccent,
+                        ),
+                        const SizedBox(height: 20),
+                        _promoCard(
+                          'Get Airline Tickets',
+                          'Enjoy Travelling at Discounted Price',
+                          Colors.greenAccent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          // Display scanned barcode data if available
-          if (_scannedBarcode != null)
-            Positioned(
-              bottom: 20,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Last Scanned: $_scannedBarcode',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+        ),
+      ),
+    );
+  }
+
+  // Category
+  Widget _categoryItem(IconData icon, String label, Color color) {
+    return Container(
+      width: 90,
+      margin: const EdgeInsets.only(right: 15),
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 30, color: color),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 2,
+            style: TextStyle(
+              fontSize: 13,
+              color: _darken(color, 0.25),
+              fontWeight: FontWeight.w600,
             ),
+          ),
         ],
       ),
+    );
+  }
+
+  // Promo Card
+  Widget _promoCard(String title, String subtitle, Color color) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Darken helper
+  Color _darken(Color color, [double amount = .1]) {
+    final hsl = HSLColor.fromColor(color);
+    final hslDark =
+        hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
+  }
+}
+
+// 🔐 LOGIN POPUP
+class LoginPopup extends StatelessWidget {
+  final VoidCallback onLoginSuccess;
+
+  const LoginPopup({super.key, required this.onLoginSuccess});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextEditingController userController = TextEditingController();
+    final TextEditingController passController = TextEditingController();
+
+    return AlertDialog(
+      title: const Text('Login Required'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: userController,
+            decoration: const InputDecoration(
+              labelText: 'Username',
+              prefixIcon: Icon(Icons.person),
+            ),
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: passController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              prefixIcon: Icon(Icons.lock),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            if (userController.text.isNotEmpty &&
+                passController.text.isNotEmpty) {
+              onLoginSuccess();
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Please fill in all fields")),
+              );
+            }
+          },
+          child: const Text('Login'),
+        ),
+      ],
     );
   }
 }
