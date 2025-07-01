@@ -23,6 +23,19 @@ class StorageService {
     await prefs.setString(spSellerShopId, shopId);
   }
 
+  // New: Methods for Buyer's User ID
+  static Future<String> getBuyerUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(spDeviceId) ??
+        buyerUserId; // Using spDeviceId for user ID storage
+  }
+
+  static Future<void> setBuyerUserId(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        spDeviceId, userId); // Using spDeviceId for user ID storage
+  }
+
   static Future<double> getBuyerOfflineBalance() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(spBuyerOfflineBalance) ?? 0.0;
